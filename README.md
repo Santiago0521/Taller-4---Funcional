@@ -18,7 +18,7 @@ la nota.
 |---|---|
 |Valentina Cifuentes Badillo |202611030 |
 | Santiago Vásquez Valencia | 202611028 |
-| | |
+| Nicolas Restrepo | 2380471-2724 |
 
 ## Cómo está organizado el proyecto
 
@@ -32,7 +32,8 @@ app/src/main/scala/common/
     package.scala                  parallel y task, que no se modifican
 
 app/src/test/scala/taller/
-    SimulacionParticulasTest.scala las 36 pruebas dadas, que no se modifican
+    SimulacionParticulasTest.scala pruebas base del taller
+    CasosAdicionalesTest.scala   cinco pruebas propias por cada punto
 
 docs/
     proceso.md                     informe de proceso
@@ -40,21 +41,17 @@ docs/
     paralelizacion.md              informe de paralelización
 ```
 
-Su código va en `SimulacionParticulas.scala`. Las 36 pruebas que vienen
-escritas no se modifican: son el contrato con que se califica.
+La implementación está en `SimulacionParticulas.scala`. Las pruebas propias
+se agregan en `CasosAdicionalesTest.scala`, sin cambiar las pruebas base.
 
 La rúbrica pide además **cinco casos de prueba propios por cada punto**,
 distintos de los ejemplos del enunciado y de los que trae el material. Esos
-van donde le resulte más cómodo: al final de
-`SimulacionParticulasTest.scala`, debajo de las que ya están, o en un archivo
-nuevo dentro de `app/src/test/scala/taller/`. Las dos formas valen; lo que no
-se toca es lo que ya estaba escrito.
+están en `CasosAdicionalesTest.scala`, con cinco casos para cada punto.
 
 Los tres informes que pide el enunciado, de proceso, de corrección y de
 paralelización, van en `docs/`, en Markdown, con la notación matemática en
 LaTeX y los diagramas en `mermaid`; no se aceptan imágenes insertadas ni
-archivos por fuera de esa carpeta. Los tres archivos vienen con un ejemplo
-resuelto sobre funciones distintas a las de este taller.
+archivos por fuera de esa carpeta.
 
 ## Cómo se ejecuta
 
@@ -68,20 +65,15 @@ versión de Java que necesita. No hay que instalar nada a mano. Al terminar,
 `./gradlew test` deja un informe navegable en
 `app/build/reports/tests/test/index.html`.
 
-## El punto de partida
-
-Al clonar, las 36 pruebas están en rojo, porque las catorce funciones dicen
-`???`. Su trabajo es reemplazar cada `???` y ver las pruebas ponerse en
-verde.
+## Implementación
 
 `Modelo.scala` trae los tipos ya escritos: `Vector2`, con la suma, el
 producto por un número y la norma, y `Particula`, con posición, velocidad y
 masa. El paquete `common` trae `parallel` y `task`. Ninguno de los dos se
 modifica.
 
-`medir` también viene escrita: toma la mediana de varias corridas en
-milisegundos y descarta una de calentamiento, porque la primera corrida
-siempre es más lenta mientras la máquina virtual optimiza el código.
+`medir` toma la mediana de cinco corridas en milisegundos. ScalaMeter calienta
+la máquina virtual antes de medir cada corrida.
 
 ## Los cinco puntos
 

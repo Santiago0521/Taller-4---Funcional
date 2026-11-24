@@ -1,88 +1,44 @@
 package taller
 
-/**
- * El punto 5 pide medir aquí, sobre un sistema de al menos un millón de
- * partículas, el tiempo de `pasoSecuencial` y el de `pasoParalelo` con varios
- * umbrales, y reportar la aceleración de cada uno.
- *
- * Lo que hay ahora es el arranque mínimo sobre dos partículas.
- */
 object App {
 
   def main(args: Array[String]): Unit = {
-    val sim = new SimulacionParticulas()
-    import sim._
+    val simulacion = new SimulacionParticulas()
+    import simulacion._
 
-    // Parametros del Experiemnto
-    val cantidadPar = 1000000
     val dt = 0.01
     val repeticiones = 5
+    val procesadores = Runtime.getRuntime.availableProcessors()
+    val tamaños = List(1000000, 2000000)
 
-    // Umbrales a commparar
-    val umbrales = List(100, 1000, 10000, 100000)
-
-    // Creacion del Sistema
-    val sistema: Sistema = Array.tabulate(cantidadPar) { 
-      i => Particula(Vector2(i.toDouble, (i % 1000).toDouble), Vector2(1.0,0.5), 1.0)
-    }
-
-    println("===========================================")
-    println("         SIMULACION DE PARTICULAS          ")
-    println("===========================================")
-
-    println(s"Particulas: ${sistema.length}")
-    println(s"Nucleos disponibles: ${Runtime.getRuntime.availableProcessors}")
-    println(s"Repeticiones por medicion: $repeticiones")
-    println(s"Delta de Tiempo: $dt")
-
-
-    // Medicion secuencial
-    println("\nMidiendo version secuencial...")
-
-    val tiempoSecuencial = medir(repeticiones) {
-      pasoSecuencial(sistema, dt)
-    }
-
-    println(f"Tiempo secuencial: $tiempoSecuencial%.4f ms")
-
-    // Medicones paralelas para cada Umbral
-    println("\nMidiendo versiones paralelas...")
-
-    val medicionPar: List[(Int, Double)] = umbrales.map {
-      umbral => val tiempo = medir(repeticiones) {
-        pasoParalelo(sistema, dt, umbral)
+    def medirSistema(n: Int): List[String] = {
+      val sistema: Sistema = Array.tabulate(n) { i =>
+        Particula(
+          Vector2(i.toDouble, (i % 1000).toDouble),
+          Vector2(1.0, 0.5),
+          1.0
+        )
       }
-      (umbral, tiempo)
-    }
+      val secuencial = medir(repeticiones) { pasoSecuencial(sistema, dt) }
+      val umbrales = List(1024, n / 16, n / 4, n).distinct.sorted
 
-    // Reporte
-
-    println("\n===============================")
-    println("           RESULTADOS            ")
-    println("=================================")
-
-    println("==============================================================")
-    println(f"${"Umbral"}%12s | ${"Tiempo (ms)"}%14s | ${"Aceleracion"}%14s")
-    println("==============================================================")
-
-    medicionPar.foreach {
-      case (umbral, tiempo) => val aceleracionObt = aceleracion(tiempoSecuencial, tiempo)
-
-      println(f"$umbral%12d | $tiempo%14.4f | $aceleracionObt%14.4f")
-    }
-
-    // Identificar el mejor Umbral
-    val mejorUmbral = medicionPar.reduceLeft {
-      (mejor, actual) => 
-        if (actual._2 < mejor._2) {
-          actual 
-        } else {
-          mejor
+      umbrales.map { umbral =>
+        val paralelo = medir(repeticiones) {
+          pasoParalelo(sistema, dt, umbral)
         }
-    }._1
+        val aceleracionMedida = aceleracion(secuencial, paralelo)
+        val aceleracionEstimada =
+          trabajo(n).toDouble / tiempoEstimado(n, procesadores, umbral)
+        f"$n%d | $umbral%d | $secuencial%.4f | $paralelo%.4f | " +
+          f"$aceleracionMedida%.4f | $aceleracionEstimada%.4f"
+      }
+    }
 
-    println("============================================================")
-    println(s"umbral mas convceniente: $mejorUmbral")
-    println("======================================")
+    val filas = tamaños.flatMap(medirSistema)
+    println("Simulacion de particulas")
+    println(s"Nucleos disponibles: $procesadores")
+    println(s"Repeticiones por medicion: $repeticiones; dt: $dt")
+    println("n | umbral | secuencial (ms) | paralelo (ms) | aceleracion | estimacion")
+    println(filas.mkString("\n"))
   }
 }

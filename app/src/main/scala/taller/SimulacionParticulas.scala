@@ -38,43 +38,97 @@ class SimulacionParticulas {
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
   def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
-    if (s.length <= umbral || s.length <= 1) {
-      pasoSecuencial(s, dt)
-    } else {
-      val mitad = s.length / 2
-      
-      val (izq, der) = parallel(
-        pasoParalelo(s.slice(0, mitad), dt, umbral),
-        pasoParalelo(s.slice(mitad, s.length), dt, umbral)
-      )
-      izq ++ der
+    def avanzar(desde: Int, hasta: Int): Sistema = {
+      val tamaño = hasta - desde
+      if (tamaño <= umbral || tamaño <= 1) {
+        pasoSegmento(s, dt, desde, hasta)
+      } else {
+        val mitad = desde + tamaño / 2
+        val (izquierda, derecha) = parallel(
+          avanzar(desde, mitad),
+          avanzar(mitad, hasta)
+        )
+        izquierda ++ derecha
+      }
     }
+    avanzar(0, s.length)
   }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 
   /** La suma de las energías cinéticas, media masa por velocidad al cuadrado. */
-  def energiaSecuencial(s: Sistema): Double = ???
+  def energiaSecuencial(s: Sistema): Double = {
+    s.foldLeft(0.0) { (total, particula) =>
+      total + 0.5 * particula.masa * particula.vel.norma * particula.vel.norma
+    }
+  }
 
   /** La suma de las masas. */
-  def masaTotal(s: Sistema): Double = ???
+  def masaTotal(s: Sistema): Double = {
+    s.foldLeft(0.0) { (total, particula) => total + particula.masa }
+  }
 
   /**
    * La suma de las posiciones ponderadas por la masa, dividida entre la masa
    * total. Sin masa, el origen.
    */
-  def centroDeMasaSecuencial(s: Sistema): Vector2 = ???
+  def centroDeMasaSecuencial(s: Sistema): Vector2 = {
+    val (posicionPonderada, masa) = s.foldLeft((Vector2(0.0, 0.0), 0.0)) {
+      case ((suma, masaAcumulada), particula) =>
+        (suma + particula.pos * particula.masa, masaAcumulada + particula.masa)
+    }
+    if (masa == 0.0) Vector2(0.0, 0.0)
+    else posicionPonderada * (1.0 / masa)
+  }
 
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
-  def energiaParalela(s: Sistema, umbral: Int): Double = ???
+  def energiaParalela(s: Sistema, umbral: Int): Double = {
+    def acumular(desde: Int, hasta: Int): Double = {
+      val tamaño = hasta - desde
+      if (tamaño <= umbral || tamaño <= 1) {
+        s.slice(desde, hasta).foldLeft(0.0) { (total, particula) =>
+          total + 0.5 * particula.masa * particula.vel.norma * particula.vel.norma
+        }
+      } else {
+        val mitad = desde + tamaño / 2
+        val (izquierda, derecha) = parallel(
+          acumular(desde, mitad),
+          acumular(mitad, hasta)
+        )
+        izquierda + derecha
+      }
+    }
+    acumular(0, s.length)
+  }
 
   /**
    * El centro de masa, repartido. Promediar los promedios de cada mitad da
    * otra cosa cuando las dos mitades no pesan igual.
    */
-  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = ???
+  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+    def acumular(desde: Int, hasta: Int): (Vector2, Double) = {
+      val tamaño = hasta - desde
+      if (tamaño <= umbral || tamaño <= 1) {
+        s.slice(desde, hasta).foldLeft((Vector2(0.0, 0.0), 0.0)) {
+          case ((suma, masaAcumulada), particula) =>
+            (suma + particula.pos * particula.masa, masaAcumulada + particula.masa)
+        }
+      } else {
+        val mitad = desde + tamaño / 2
+        val (izquierda, derecha) = parallel(
+          acumular(desde, mitad),
+          acumular(mitad, hasta)
+        )
+        (izquierda._1 + derecha._1, izquierda._2 + derecha._2)
+      }
+    }
+
+    val (posicionPonderada, masa) = acumular(0, s.length)
+    if (masa == 0.0) Vector2(0.0, 0.0)
+    else posicionPonderada * (1.0 / masa)
+  }
 
   // Punto 4: trabajo y profundidad --------------------------------------------
 
